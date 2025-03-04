@@ -138,8 +138,77 @@ def generate_hw02(question, city=[], store_type=[], start_date=None, end_date=No
 
 
 def generate_hw03(question, store_name, new_store_name, city, store_type):
-    pass
+    chroma_client = chromadb.PersistentClient(path=dbpath)
     
+    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+        api_key=gpt_emb_config['api_key'],
+        api_base=gpt_emb_config['api_base'],
+        api_type=gpt_emb_config['openai_type'],
+        api_version=gpt_emb_config['api_version'],
+        deployment_id=gpt_emb_config['deployment_name']
+    )
+    
+    collection = chroma_client.get_or_create_collection(
+        name="TRAVEL",
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=openai_ef
+    )
+    
+    # 更新店家名稱
+    results = collection.get()
+    for i, metadata in enumerate(results["metadatas"]):
+        if metadata["name"] == store_name:
+            metadata["new_store_name"] = new_store_name
+            collection.update(
+                ids=[results["ids"][i]],
+                metadatas=[metadata]
+            )
+    
+    # 查詢資料
+    results = collection.query(
+        query_texts=[question],
+        n_results=60
+    )
+    
+    # 確保結果中有距離資訊
+    if not results["distances"] or len(results["distances"]) == 0:
+        return []
+    
+    # **解開巢狀列表**
+    ids_list = results["ids"][0] if results["ids"] else []
+    distances_list = results["distances"][0] if results["distances"] else []
+    metadatas_list = results["metadatas"][0] if results["metadatas"] else []
+
+    for i in range(len(ids_list)):  # 確保正確迭代
+        metadata = metadatas_list[i]
+        score = distances_list[i]
+        similarity = 1 - score  # 轉換為相似度
+        name = metadata.get("new_store_name", metadata.get("name", "Unknown"))
+        print(f"Before Matching Store: {name}, City: {metadata.get('city', 'Unknown')}, Type: {metadata.get('type', 'Unknown')}, Similarity: {similarity}")
+
+    # 篩選條件
+    filtered_results = []
+    for i in range(len(ids_list)):  # 確保正確迭代
+        metadata = metadatas_list[i]
+        score = distances_list[i]
+
+        similarity = 1 - score  # 轉換為相似度
+
+        if similarity >= 0.80:  # 修正為正確相似度比較
+            if city and metadata.get("city", "") not in city:
+                continue
+            if store_type and metadata.get("type", "") not in store_type:
+                continue
+            name = metadata.get("new_store_name", metadata.get("name", "Unknown"))
+            print(f"Matching Store: {name}, City: {metadata.get('city', 'Unknown')}, Type: {metadata.get('type', 'Unknown')}, Similarity: {similarity}")
+            filtered_results.append((name, similarity))
+    
+    # 依據相似度排序（由高到低）
+    filtered_results.sort(key=lambda x: x[1], reverse=True)
+    
+    # 回傳店家名稱列表
+    return [name for name, _ in filtered_results]   
+
 def demo(question):
     chroma_client = chromadb.PersistentClient(path=dbpath)
     openai_ef = embedding_functions.OpenAIEmbeddingFunction(
@@ -168,13 +237,21 @@ if __name__ == '__main__':
     #    print(f"Document: {results['documents'][i]}")
     #    print(f"Metadata: {results['metadatas'][i]}")
     #    print("-" * 40)
-    question = '我想要找有關茶餐點的店家'
-    city = ["宜蘭縣", "新北市"]
+    #question = '我想要找有關茶餐點的店家'
+    #city = ["宜蘭縣", "新北市"]
+    #store_type = ["美食"]
+    #start_date = datetime.datetime(2024, 4, 1)
+    #end_date  = datetime.datetime(2024, 5, 1)
+    #result = generate_hw02(question, city, store_type, start_date, end_date)
+    #print(result)
+    question = '我想要找南投縣的田媽媽餐廳，招牌是蕎麥麵'
+    store_name = "耄饕客棧"
+    new_store_name = "田媽媽（耄饕客棧）"
+    city = ["南投縣"]
     store_type = ["美食"]
-    start_date = datetime.datetime(2024, 4, 1)
-    end_date  = datetime.datetime(2024, 5, 1)
-    result = generate_hw02(question, city, store_type, start_date, end_date)
+    result = generate_hw03(question, store_name, new_store_name, city, store_type)
     print(result)
+
     
  
    
