@@ -228,15 +228,15 @@ def demo(question):
 
 if __name__ == '__main__':
     #可以在程式後，印出collection內容
-    #collection = generate_hw01()
+    collection = generate_hw01()
     # 取得所有記錄（限制前 5 筆以便查看）
-    #results = collection.get()
+    results = collection.get()
     # 印出資料
-    #for i in range(min(5, len(results["ids"]))):
-    #    print(f"ID: {results['ids'][i]}")
-    #    print(f"Document: {results['documents'][i]}")
-    #    print(f"Metadata: {results['metadatas'][i]}")
-    #    print("-" * 40)
+    for i in range(min(5, len(results["ids"]))):
+        print(f"ID: {results['ids'][i]}")
+        print(f"Document: {results['documents'][i]}")
+        print(f"Metadata: {results['metadatas'][i]}")
+        print("-" * 40)
     #question = '我想要找有關茶餐點的店家'
     #city = ["宜蘭縣", "新北市"]
     #store_type = ["美食"]
@@ -244,13 +244,13 @@ if __name__ == '__main__':
     #end_date  = datetime.datetime(2024, 5, 1)
     #result = generate_hw02(question, city, store_type, start_date, end_date)
     #print(result)
-    question = '我想要找南投縣的田媽媽餐廳，招牌是蕎麥麵'
-    store_name = "耄饕客棧"
-    new_store_name = "田媽媽（耄饕客棧）"
-    city = ["南投縣"]
-    store_type = ["美食"]
-    result = generate_hw03(question, store_name, new_store_name, city, store_type)
-    print(result)
+    #question = '我想要找南投縣的田媽媽餐廳，招牌是蕎麥麵'
+    #store_name = "耄饕客棧"
+    #new_store_name = "田媽媽（耄饕客棧）"
+    #city = ["南投縣"]
+    #store_type = ["美食"]
+    #result = generate_hw03(question, store_name, new_store_name, city, store_type)
+    #print(result)
 
     
  
