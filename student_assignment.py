@@ -13,16 +13,21 @@ gpt_emb_config = get_model_configuration(gpt_emb_version)
 
 dbpath = "./"
 
-def generate_hw01():
+def initialize_db():
+    client = chromadb.PersistentClient(path=dbpath)
+    
+    # 如果資料庫已經存在，則跳過重建
+    existing_collections = client.list_collections()
+    if any(col.name == "TRAVEL" for col in existing_collections):
+        print("ChromaDB already exists. Skipping database reconstruction.")
+        return
+    
     # 讀取 CSV 檔案
     file_path = "./COA_OpenData.csv"
     df = pd.read_csv(file_path)
     
     # 轉換日期為時間戳格式（秒）
     df['date'] = pd.to_datetime(df['CreateDate']).astype('int64') // 10**9
-    
-    # 初始化 ChromaDB 客戶端（使用 SQLite 作為儲存）
-    client = chromadb.PersistentClient(path=dbpath)
     
     # 刪除舊 Collection，確保使用 OpenAI Embedding (1536 維度)
     try:
@@ -66,6 +71,24 @@ def generate_hw01():
             documents=[document_text],
             metadatas=[metadata]
         )
+
+def generate_hw01():
+    chroma_client = chromadb.PersistentClient(path=dbpath)
+    
+    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+        api_key=gpt_emb_config['api_key'],
+        api_base=gpt_emb_config['api_base'],
+        api_type=gpt_emb_config['openai_type'],
+        api_version=gpt_emb_config['api_version'],
+        deployment_id=gpt_emb_config['deployment_name']
+    )
+    
+    collection = chroma_client.get_or_create_collection(
+        name="TRAVEL",
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=openai_ef
+    )
+    
     return collection
 
 def generate_hw02(question, city=[], store_type=[], start_date=None, end_date=None):
@@ -227,6 +250,8 @@ def demo(question):
     return collection
 
 if __name__ == '__main__':
+    #產生chroma.sqlite3
+    #initialize_db()
     #可以在程式後，印出collection內容
     collection = generate_hw01()
     # 取得所有記錄（限制前 5 筆以便查看）
